@@ -268,10 +268,10 @@ function render(o){
   const grid=new THREE.GridHelper(Math.max(XW,depth),12,o.dark?0x2a2f39:0xd9dde3,o.dark?0x1e222a:0xeceef1);grid.scale.set(XW/Math.max(XW,depth),1,depth/Math.max(XW,depth));grid.position.y=-0.01;group.add(grid);
   // y ticks on back wall
   const step=(()=>{const raw=maxAbs/3,mag=Math.pow(10,Math.floor(Math.log10(raw))),e=raw/mag;return (e>=5?10:e>=2?5:e>=1?2:1)*mag/ (e>=5?2:1)})();
-  for(let v=-Math.floor(maxAbs/step)*step;v<=maxAbs+1;v+=step){const y=sy(v);const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-XW/2,y,-depth/2-1),new THREE.Vector3(XW/2,y,-depth/2-1)]);group.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:v===0?(o.dark?0x5a6170:0xaab0b9):(o.dark?0x262a33:0xe3e6ea)})));const l=label(o.short(v),muted,2.2);l.position.set(-XW/2-6,y,-depth/2-1);group.add(l)}
+  for(let v=-Math.floor(maxAbs/step)*step;v<=maxAbs+1;v+=step){const y=sy(v);const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-XW/2,y,-depth/2-1),new THREE.Vector3(XW/2,y,-depth/2-1)]);group.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:v===0?(o.dark?0x5a6170:0xaab0b9):(o.dark?0x262a33:0xe3e6ea)})));const l=label(o.short(v),muted,3.6);l.position.set(-XW/2-l.scale.x/2-1.5,y,-depth/2-1);group.add(l)}
   // hand ticks along front
   const hs=[10,20,25,50,100].find(s=>maxH/s<=8)||100;
-  for(let h=0;h<=maxH;h+=hs){const l=label(h===0?'Start':'#'+h,muted,2.2);l.position.set(sx(h),-2.4,depth/2+2);group.add(l)}
+  for(let h=0;h<=maxH;h+=hs){const l=label(h===0?'Start':'#'+h,muted,3.6);l.position.set(sx(h),-2.4,depth/2+2);group.add(l)}
   // ribbons
   order.forEach((p,i)=>{
     const mine=rows.filter(r=>r.player===p);if(!mine.length)return;
@@ -284,14 +284,14 @@ function render(o){
     const mesh=new THREE.Mesh(g,m);mesh.userData.p=p;group.add(mesh);ribbons.push(mesh);
     const path=new THREE.CurvePath();for(let k=1;k<pts.length;k++)path.add(new THREE.LineCurve3(new THREE.Vector3(sx(pts[k-1][0]),sy(pts[k-1][1]),z),new THREE.Vector3(sx(pts[k][0]),sy(pts[k][1]),z)));
     if(pts.length>1){const tube=new THREE.Mesh(new THREE.TubeGeometry(path,Math.max(8,(pts.length-1)*2),.32,6,false),new THREE.MeshStandardMaterial({color:col,roughness:.4,emissive:col,emissiveIntensity:.25}));tube.userData.p=p;tube.userData.edge=true;group.add(tube)}
-    const last=pts[pts.length-1];const nl=label(p,o.color(p),2.6);nl.position.set(sx(last[0])+2+nl.scale.x/2,sy(last[1])+1.5,z);group.add(nl);
+    const last=pts[pts.length-1];const nl=label(p,o.color(p),4);nl.position.set(sx(last[0])+2+nl.scale.x/2,sy(last[1])+1.5,z);group.add(nl);
   });
   // selected hand
   const hx=sx(o.hand);
-  const plane=new THREE.Mesh(new THREE.PlaneGeometry(depth,YH*2.2),new THREE.MeshBasicMaterial({color:o.dark?0xffffff:0x000000,transparent:true,opacity:.06,side:THREE.DoubleSide,depthWrite:false}));plane.rotation.y=Math.PI/2;plane.position.set(hx,0,0);group.add(plane);
+  const plane=new THREE.Mesh(new THREE.PlaneGeometry(depth,YH*2.1),new THREE.MeshBasicMaterial({color:o.dark?0xffffff:0x000000,transparent:true,opacity:.06,side:THREE.DoubleSide,depthWrite:false}));plane.rotation.y=Math.PI/2;plane.position.set(hx,0,0);group.add(plane);
   rows.filter(r=>r.hand===o.hand).forEach(r=>{const i=order.indexOf(r.player);const s=new THREE.Mesh(new THREE.SphereGeometry(.9,16,12),new THREE.MeshStandardMaterial({color:new THREE.Color(o.color(r.player)),emissive:new THREE.Color(o.color(r.player)),emissiveIntensity:.4}));s.position.set(hx,sy(r.day_gl),sz(i));group.add(s)});
-  const hl=label('Hand '+o.hand,ink,2.8);hl.position.set(hx,YH*1.15,-depth/2);group.add(hl);
-  if(!placed){cam.position.set(-XW*0.62,YH*1.5,depth/2+XW*0.78);ctl.target.set(XW*0.05,0,0);ctl.update();placed=true}
+  const hl=label('Hand '+o.hand,ink,4.4);hl.position.set(hx,YH*1.15,-depth/2);group.add(hl);
+  if(!placed){cam.position.set(-XW*0.42,YH*1.15,depth/2+XW*0.55);ctl.target.set(XW*0.04,2,0);ctl.update();placed=true}
   hint.textContent='Drag to rotate · scroll to zoom';
 }
 function highlight(p){group.children.forEach(c=>{if(c.userData.p===undefined)return;const on=!p||c.userData.p===p;c.material.opacity=c.userData.edge?(on?1:.15):(on?.42:.06);c.material.transparent=true})}
