@@ -254,9 +254,9 @@ function size(){const w=box.clientWidth||600,h=box.clientHeight||480;R.setSize(w
 function pick(e){if(!st)return null;const r=R.domElement.getBoundingClientRect();ptr.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ptr,cam);
   const hit=ray.intersectObjects(ribbons,false)[0];if(!hit)return null;return Math.max(1,Math.min(st.maxH,Math.round((hit.point.x+XW/2)/XW*st.maxH)))}
 function clear(){group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose()}});group.clear();ribbons=[]}
-function label(text,color,size){const c=document.createElement('canvas');const ctx=c.getContext('2d');const fs=48;ctx.font='600 '+fs+'px Helvetica, Arial, sans-serif';const w=Math.ceil(ctx.measureText(text).width)+16;c.width=w;c.height=fs+20;
-  const x=c.getContext('2d');x.font=ctx.font;x.fillStyle=color;x.textBaseline='middle';x.fillText(text,8,c.height/2);
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.minFilter=THREE.LinearFilter;const m=new THREE.SpriteMaterial({map:t,depthWrite:false,transparent:true});const s=new THREE.Sprite(m);const k=size*1.1;s.scale.set(k*w/c.height,k,1);return s}
+function label(text,color,size){const c=document.createElement('canvas');const ctx=c.getContext('2d');const fs=48;const F='600 '+fs+'px Helvetica, Arial, sans-serif';ctx.font=F;const w=Math.ceil(ctx.measureText(text).width)+16;c.width=w;c.height=fs+20;
+  const x=c.getContext('2d');x.font=F;x.fillStyle=color;x.textBaseline='middle';x.fillText(text,8,c.height/2);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.minFilter=THREE.LinearFilter;const m=new THREE.SpriteMaterial({map:t,depthWrite:false,transparent:true});const s=new THREE.Sprite(m);const k=size*0.9;s.scale.set(k*w/c.height,k,1);return s}
 function render(o){
   st=o;clear();
   const {rows,order,maxH}=o;const n=order.length;if(!n)return;
