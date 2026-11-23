@@ -15,10 +15,12 @@ header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
 .eyebrow{margin:0;color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
 h1{margin:4px 0 0;font:400 30px/1.15 Georgia,"Times New Roman",serif}
 .status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.statusbox{text-align:right}.feed{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;margin-bottom:4px}.feed .lbl{color:var(--muted);font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:2px}@media (max-width:600px){.statusbox{text-align:left}}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(63,191,127,.6);animation:pulse 2s infinite}
 .dot.stale{background:var(--muted);animation:none}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,191,127,.55)}70%{box-shadow:0 0 0 8px rgba(63,191,127,0)}100%{box-shadow:0 0 0 0 rgba(63,191,127,0)}}
-@media (prefers-reduced-motion: reduce){.dot{animation:none}}
+@media (prefers-reduced-motion: reduce){.statusbox{text-align:right}.feed{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;margin-bottom:4px}.feed .lbl{color:var(--muted);font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:2px}@media (max-width:600px){.statusbox{text-align:left}}
+.dot{animation:none}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
 h2{margin:0 0 4px;font-size:17px;font-weight:600}
 .sub{margin:0 0 14px;color:var(--muted);font-size:14px}
@@ -57,7 +59,7 @@ tr:last-child td{border-bottom:0}
 <div class="wrap">
 <header>
 <div><p class="eyebrow">High Stakes Poker · Session of Nov 22, 2026</p><h1>Player win/loss, hand by hand</h1></div>
-<div class="status"><span class="dot" id="dot"></span><span id="status">Loading…</span></div>
+<div class="statusbox"><div class="feed" id="feed">Loading…</div><div class="status"><span class="dot" id="dot"></span><span id="status"></span></div></div>
 </header>
 
 <section class="card" id="trend">
@@ -87,7 +89,7 @@ tr:last-child td{border-bottom:0}
 <dt>Day G/L</dt><dd>A player’s running total of Hand G/L, the same way the event dashboard counts it. It leaves out chips added or taken off between hands (rebuys, top-ups and side transfers), so it measures results at the table, not net cash. That is why a player’s end stack and Day G/L can differ.</dd>
 <dt>Added / took off before hand</dt><dd>Shown when a player’s start stack differs from where they ended their previous hand.</dd>
 <dt>Cards</dt><dd>Hole cards as recorded; blank when they weren’t captured.</dd>
-<dt>Updates</dt><dd>New hands are added about every 5 minutes during the session. This page checks for them every minute.</dd>
+<dt>Delay</dt><dd>This page runs on the same delay as the feed: a hand’s results appear only after that hand has finished on the delayed feed, so nothing is spoiled. Hand times shown are the live times the hand was recorded.</dd><dt>Updates</dt><dd>New hands are added about every 5 minutes during the session. This page checks for them every minute.</dd>
 </dl></details></footer>
 </div>
 
@@ -95,7 +97,7 @@ tr:last-child td{border-bottom:0}
 (function(){
 const NS='http://www.w3.org/2000/svg';
 const PALETTE=['#4e9af1','#e8b84a','#3fbf7f','#ef5b5b','#a77bf3','#f28c38','#3cc6c6','#e86bb3','#9aa1ad','#7fd16b'];
-let rows=[],order=[],byHand=new Map(),maxH=1,hand=null,follow=true,updated=null;
+let allRows=[],timing={},delay=0,rows=[],order=[],byHand=new Map(),maxH=1,hand=null,follow=true,updated=null,visKey='',feedHand=null,feedLive=false;
 const $=id=>document.getElementById(id);
 const fmt=n=>Math.abs(n).toLocaleString('en-US');
 const signed=v=>(v>0?'+':v<0?'-':'')+'$'+fmt(v);
@@ -113,22 +115,28 @@ async function load(){
     const r=await fetch('data.json?t='+Date.now(),{cache:'no-store'});
     if(!r.ok)throw new Error(r.status);
     const d=await r.json();
-    const C=d.cols;rows=d.rows.map(a=>Object.fromEntries(C.map((c,i)=>[c,a[i]])));
+    const C=d.cols;allRows=d.rows.map(a=>Object.fromEntries(C.map((c,i)=>[c,a[i]])));
+    timing=d.timing||{};delay=d.delay_seconds||0;
     updated=new Date(d.updated);
-    order=[...new Set(rows.map(r=>r.player))];
-    byHand=new Map();rows.forEach(r=>{if(!byHand.has(r.hand))byHand.set(r.hand,[]);byHand.get(r.hand).push(r)});
-    const newMax=Math.max(...rows.map(r=>r.hand));
-    if(hand===null||follow)hand=newMax;
-    maxH=newMax;
-    render();
+    visKey='';applyDelay();
   }catch(e){$('status').textContent='Couldn’t load the latest data — retrying';$('status').className='err';}
 }
+function applyDelay(){
+  const feedNow=Date.now()/1000-delay;
+  const done=new Set();feedHand=null;feedLive=false;
+  const hs=[...new Set(allRows.map(r=>r.hand))].sort((a,b)=>a-b);
+  hs.forEach(h=>{const t=timing[h];if(!t||t[1]<=feedNow)done.add(h);else if(t[0]<=feedNow){feedHand=h;feedLive=true}});
+  if(feedHand===null){const next=hs.find(h=>!done.has(h));feedHand=next||null;}
+  const key=[...done].join(',');
+  if(key!==visKey){visKey=key;rows=allRows.filter(r=>done.has(r.hand));order=[...new Set(rows.map(r=>r.player))];byHand=new Map();rows.forEach(r=>{if(!byHand.has(r.hand))byHand.set(r.hand,[]);byHand.get(r.hand).push(r)});const newMax=rows.length?Math.max(...rows.map(r=>r.hand)):1;if(hand===null||follow||hand>newMax)hand=newMax;maxH=newMax;render();}else status();
+}
+const hms=sec=>{const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=Math.round(sec%60);return h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')};
 function status(){
   if(!updated)return;
   const mins=Math.round((Date.now()-updated)/60000);
-  const last=byHand.get(maxH);
+  const feed=$('feed');feed.replaceChildren(el('span',{class:'lbl'},delay?'On the delayed feed now':'Live now'),document.createTextNode(feedHand?('Hand '+feedHand+(feedLive?' in progress':' up next')):'Caught up · hand '+maxH));
   $('status').className='';
-  $('status').textContent='Through hand '+maxH+(last?' ('+niceTime(last[0].time)+' PT)':'')+' · updated '+(mins<1?'just now':mins+' min ago');
+  $('status').textContent=(delay?'Synced to feed '+hms(delay)+' behind live · ':'')+'results through hand '+maxH+' · data updated '+(mins<1?'just now':mins+' min ago');
   $('dot').classList.toggle('stale',mins>15);
 }
 function setHand(h){hand=Math.max(1,Math.min(maxH,h));follow=hand===maxH;render();}
@@ -190,7 +198,7 @@ $('latest').onclick=()=>setHand(maxH);
 $('range').oninput=e=>setHand(+e.target.value);
 document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowLeft')setHand(hand-1);if(e.key==='ArrowRight')setHand(hand+1)});
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>rows.length&&drawChart(),150)});
-load();setInterval(load,60000);setInterval(status,30000);
+load();setInterval(load,60000);setInterval(()=>{if(allRows.length)applyDelay()},5000);
 })();
 </script>
 </body>
