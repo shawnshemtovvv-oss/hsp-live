@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>High Stakes Poker — Live Win/Loss by Hand</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--line:#262b35;--fg:#eceef2;--muted:#9aa1ad;--ok:#3fbf7f;--bad:#ef5b5b;--grid:#20242d;--axis:#3a404c;--accent:#e8b84a}
+@media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--panel:#fff;--line:#e3e6eb;--fg:#15181d;--muted:#5f6672;--ok:#1e9e5f;--bad:#d43c3c;--grid:#eef0f3;--axis:#c9ced6;--accent:#b8860b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 48px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.eyebrow{margin:0;color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+h1{margin:4px 0 0;font:400 30px/1.15 Georgia,"Times New Roman",serif}
+.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(63,191,127,.6);animation:pulse 2s infinite}
+.dot.stale{background:var(--muted);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,191,127,.55)}70%{box-shadow:0 0 0 8px rgba(63,191,127,0)}100%{box-shadow:0 0 0 0 rgba(63,191,127,0)}}
+@media (prefers-reduced-motion: reduce){.dot{animation:none}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+h2{margin:0 0 4px;font-size:17px;font-weight:600}
+.sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+.chart{position:relative;min-height:320px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-bottom:10px;font-size:13px}
+.chip{display:inline-flex;align-items:center;cursor:default}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:7px;flex:none}
+svg text{fill:var(--muted);font-size:12px}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.25);border-radius:8px;padding:8px 12px;font-size:13px;font-variant-numeric:tabular-nums;z-index:2;min-width:200px}
+.tip-h{color:var(--muted);margin-bottom:4px}
+.tip-r{display:flex;justify-content:space-between;align-items:center;gap:16px;line-height:1.65}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+button{font:inherit;font-size:14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 14px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+input[type=range]{flex:1 1 180px;min-width:120px;accent-color:var(--accent)}
+.hlabel{font-weight:600;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.num{text-align:right}
+.pos{color:var(--ok)}.neg{color:var(--bad)}.zero{color:var(--muted)}
+.red{color:var(--bad)}
+.tag{display:inline-block;margin-left:8px;padding:0 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:12px}
+.win td{background:color-mix(in srgb,var(--ok) 11%,transparent)}
+.foot{color:var(--muted);font-size:13px}
+.foot summary{cursor:pointer}
+.foot dt{color:var(--fg);font-weight:600;margin-top:8px}
+.foot dd{margin:2px 0 0}
+.err{color:var(--bad)}
+@media (max-width:600px){h1{font-size:24px}.card{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div><p class="eyebrow">High Stakes Poker · Session of Nov 22, 2026</p><h1>Player win/loss, hand by hand</h1></div>
+<div class="status"><span class="dot" id="dot"></span><span id="status">Loading…</span></div>
+</header>
+
+<section class="card" id="trend">
+<h2>Running Day G/L across the session</h2>
+<p class="sub">Each line is a player’s total after every hand. Point at the chart for that hand’s numbers; click to open it below.</p>
+<div class="chart" id="chart"><div class="legend" id="legend"></div><div id="svgwrap"></div><div class="tip" id="tip" hidden></div></div>
+</section>
+
+<section class="card" id="explorer">
+<h2>Every hand: where each player stood at the start and end</h2>
+<p class="sub">Step through the session. Day G/L at start is a player’s running total before the hand; at end, after it.</p>
+<div class="controls">
+<button type="button" id="prev" aria-label="Previous hand">← Prev</button>
+<input type="range" id="range" min="1" max="1" value="1" aria-label="Hand number">
+<button type="button" id="next" aria-label="Next hand">Next →</button>
+<button type="button" id="latest">Latest</button>
+<span class="hlabel" id="hlabel">—</span>
+</div>
+<div class="scroll"><table>
+<thead><tr><th>Player</th><th class="num">Start stack</th><th class="num">End stack</th><th class="num">Hand G/L</th><th class="num">Day G/L at start</th><th class="num">Day G/L at end</th><th>Cards</th></tr></thead>
+<tbody id="tbody"><tr><td colspan="7">Loading…</td></tr></tbody>
+</table></div>
+</section>
+
+<footer class="foot"><details><summary>How these numbers are worked out</summary><dl>
+<dt>Hand G/L</dt><dd>End stack minus start stack for that hand.</dd>
+<dt>Day G/L</dt><dd>A player’s running total of Hand G/L, the same way the event dashboard counts it. It leaves out chips added or taken off between hands (rebuys, top-ups and side transfers), so it measures results at the table, not net cash. That is why a player’s end stack and Day G/L can differ.</dd>
+<dt>Added / took off before hand</dt><dd>Shown when a player’s start stack differs from where they ended their previous hand.</dd>
+<dt>Cards</dt><dd>Hole cards as recorded; blank when they weren’t captured.</dd>
+<dt>Updates</dt><dd>New hands are added about every 5 minutes during the session. This page checks for them every minute.</dd>
+</dl></details></footer>
+</div>
+
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';
+const PALETTE=['#4e9af1','#e8b84a','#3fbf7f','#ef5b5b','#a77bf3','#f28c38','#3cc6c6','#e86bb3','#9aa1ad','#7fd16b'];
+let rows=[],order=[],byHand=new Map(),maxH=1,hand=null,follow=true,updated=null;
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.abs(n).toLocaleString('en-US');
+const signed=v=>(v>0?'+':v<0?'-':'')+'$'+fmt(v);
+const money=v=>'$'+fmt(v);
+const short=v=>{const a=Math.abs(v),s=v<0?'-':'';return s+'$'+(a>=1e6?(+(a/1e6).toFixed(2))+'M':a>=1e3?(+(a/1e3).toFixed(0))+'K':a)};
+const cls=v=>v>0?'pos':v<0?'neg':'zero';
+const niceTime=t=>(t||'').replace(/(AM|PM)/,' $1');
+const color=p=>PALETTE[Math.max(0,order.indexOf(p))%PALETTE.length];
+const el=(tag,attrs,text)=>{const e=document.createElement(tag);if(attrs)for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e};
+const sv=(tag,attrs)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e};
+const swatch=p=>{const s=el('span',{class:'sw'});s.style.background=color(p);return s};
+
+async function load(){
+  try{
+    const r=await fetch('data.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error(r.status);
+    const d=await r.json();
+    const C=d.cols;rows=d.rows.map(a=>Object.fromEntries(C.map((c,i)=>[c,a[i]])));
+    updated=new Date(d.updated);
+    order=[...new Set(rows.map(r=>r.player))];
+    byHand=new Map();rows.forEach(r=>{if(!byHand.has(r.hand))byHand.set(r.hand,[]);byHand.get(r.hand).push(r)});
+    const newMax=Math.max(...rows.map(r=>r.hand));
+    if(hand===null||follow)hand=newMax;
+    maxH=newMax;
+    render();
+  }catch(e){$('status').textContent='Couldn’t load the latest data — retrying';$('status').className='err';}
+}
+function status(){
+  if(!updated)return;
+  const mins=Math.round((Date.now()-updated)/60000);
+  const last=byHand.get(maxH);
+  $('status').className='';
+  $('status').textContent='Through hand '+maxH+(last?' ('+niceTime(last[0].time)+' PT)':'')+' · updated '+(mins<1?'just now':mins+' min ago');
+  $('dot').classList.toggle('stale',mins>15);
+}
+function setHand(h){hand=Math.max(1,Math.min(maxH,h));follow=hand===maxH;render();}
+function render(){status();drawChart();drawExplorer();}
+
+function drawExplorer(){
+  const rg=$('range');rg.max=maxH;rg.value=hand;
+  const rs=byHand.get(hand)||[];
+  $('hlabel').textContent='Hand '+hand+' of '+maxH+(rs[0]?' · '+niceTime(rs[0].time)+' PT':'');
+  const tb=$('tbody');tb.replaceChildren();
+  const top=Math.max(...rs.map(r=>r.hand_gl));
+  rs.forEach(r=>{
+    const tr=el('tr');if(r.hand_gl===top&&top>0)tr.className='win';
+    const td=el('td');td.append(swatch(r.player),document.createTextNode(r.player));
+    if(r.added_before)td.append(el('span',{class:'tag'},(r.added_before>0?'added ':'took off ')+short(Math.abs(r.added_before))+' before hand'));
+    if(r.sitting_out)td.append(el('span',{class:'tag'},'sitting out'));
+    tr.append(td,el('td',{class:'num'},money(r.start)),el('td',{class:'num'},money(r.end)),el('td',{class:'num '+cls(r.hand_gl)},signed(r.hand_gl)),el('td',{class:'num '+cls(r.day_gl_start)},signed(r.day_gl_start)),el('td',{class:'num '+cls(r.day_gl)},signed(r.day_gl)));
+    const cd=el('td');(r.cards||'').split(' ').filter(Boolean).forEach((c,i)=>{const s=c.slice(-1);const sp=el('span',null,(i?' ':'')+c.slice(0,-1)+({s:'♠',h:'♥',d:'♦',c:'♣'}[s]||s));if(s==='h'||s==='d')sp.className='red';cd.append(sp)});
+    tr.append(cd);tb.append(tr);
+  });
+}
+
+function niceTicks(lo,hi,n){const span=hi-lo||1;const step0=span/n;const mag=Math.pow(10,Math.floor(Math.log10(step0)));const err=step0/mag;const step=(err>=7.5?10:err>=3.5?5:err>=1.5?2:1)*mag;const a=Math.floor(lo/step)*step,b=Math.ceil(hi/step)*step;const t=[];for(let v=a;v<=b+step/2;v+=step)t.push(Math.round(v));return t}
+
+function drawChart(){
+  const wrap=$('svgwrap'),leg=$('legend'),tip=$('tip'),box=$('chart');
+  const W=Math.max(280,wrap.clientWidth||box.clientWidth||600),H=Math.round(Math.max(280,Math.min(420,W*.5)));
+  const vals=[0,...rows.map(r=>r.day_gl)];const ticks=niceTicks(Math.min(...vals),Math.max(...vals),Math.max(3,Math.round(H/60)));
+  const y0=ticks[0],y1=ticks[ticks.length-1];
+  const svg=sv('svg',{width:'100%',height:H,viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Line chart of each player’s running Day G/L after every hand'});
+  wrap.replaceChildren(svg);
+  const meas=sv('text',{});svg.append(meas);let ml=0;ticks.forEach(t=>{meas.textContent=short(t);ml=Math.max(ml,meas.getComputedTextLength())});meas.remove();
+  const M={t:10,r:12,b:26,l:Math.ceil(ml)+10};
+  const x=h=>M.l+(h/maxH)*(W-M.l-M.r),y=v=>M.t+(1-(v-y0)/(y1-y0||1))*(H-M.t-M.b);
+  ticks.forEach(t=>{svg.append(sv('line',{x1:M.l,x2:W-M.r,y1:y(t),y2:y(t),stroke:t===0?'var(--axis)':'var(--grid)'}));const tx=sv('text',{x:M.l-8,y:y(t),dy:'0.32em','text-anchor':'end'});tx.textContent=short(t);svg.append(tx)});
+  const step=[10,20,25,50,100].find(s=>maxH/s<=Math.max(3,Math.floor((W-M.l-M.r)/70)))||100;
+  for(let t=0;t<=maxH;t+=step){const tx=sv('text',{x:x(t),y:H-6,'text-anchor':'middle'});tx.textContent=t===0?'Start':t;svg.append(tx)}
+  svg.append(sv('line',{x1:M.l,x2:W-M.r,y1:H-M.b,y2:H-M.b,stroke:'var(--axis)'}));
+  svg.append(sv('line',{x1:x(hand),x2:x(hand),y1:M.t,y2:H-M.b,stroke:'var(--axis)','stroke-dasharray':'3 3'}));
+  const paths=[];
+  order.forEach(p=>{const mine=rows.filter(r=>r.player===p);if(!mine.length)return;const pts=[[mine[0].hand-1,mine[0].day_gl_start],...mine.map(r=>[r.hand,r.day_gl])];
+    const path=sv('path',{d:'M'+pts.map(q=>x(q[0]).toFixed(1)+','+y(q[1]).toFixed(1)).join('L'),fill:'none',stroke:color(p),'stroke-width':1.8,'stroke-linejoin':'round'});path.dataset.p=p;svg.append(path);paths.push(path)});
+  (byHand.get(hand)||[]).forEach(r=>svg.append(sv('circle',{r:3.5,cx:x(hand),cy:y(r.day_gl),fill:color(r.player),stroke:'var(--panel)','stroke-width':1.5})));
+  const hover=sv('line',{y1:M.t,y2:H-M.b,stroke:'var(--axis)',opacity:0});svg.append(hover);
+  leg.replaceChildren();order.forEach(p=>{const c=el('span',{class:'chip'});c.append(swatch(p),document.createTextNode(p));c.onmouseenter=()=>paths.forEach(q=>q.setAttribute('opacity',q.dataset.p===p?1:.15));c.onmouseleave=()=>paths.forEach(q=>q.setAttribute('opacity',1));leg.append(c)});
+  const ov=sv('rect',{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b,fill:'transparent'});ov.style.cursor='pointer';svg.append(ov);
+  const hAt=ev=>{const r=svg.getBoundingClientRect();const px=(ev.clientX-r.left)*(W/r.width);return Math.max(1,Math.min(maxH,Math.round((px-M.l)/(W-M.l-M.r)*maxH)))};
+  ov.addEventListener('pointermove',ev=>{const h=hAt(ev);hover.setAttribute('x1',x(h));hover.setAttribute('x2',x(h));hover.setAttribute('opacity',1);
+    const rs=(byHand.get(h)||[]).slice().sort((a,b)=>b.day_gl-a.day_gl);tip.replaceChildren(el('div',{class:'tip-h'},'Hand '+h+(rs[0]?' · '+niceTime(rs[0].time):'')+' · Day G/L'));
+    rs.forEach(r=>{const row=el('div',{class:'tip-r'});const nm=el('span');nm.append(swatch(r.player),document.createTextNode(r.player));row.append(nm,el('span',{class:cls(r.day_gl)},signed(r.day_gl)));tip.append(row)});
+    tip.hidden=false;const br=box.getBoundingClientRect();const cx=ev.clientX-br.left;const tw=tip.offsetWidth;let left=cx+14;if(left+tw>br.width)left=cx-tw-14;tip.style.left=Math.max(0,left)+'px';tip.style.top=(leg.offsetHeight+8)+'px'});
+  ov.addEventListener('pointerleave',()=>{hover.setAttribute('opacity',0);tip.hidden=true});
+  ov.addEventListener('click',ev=>setHand(hAt(ev)));
+}
+
+$('prev').onclick=()=>setHand(hand-1);
+$('next').onclick=()=>setHand(hand+1);
+$('latest').onclick=()=>setHand(maxH);
+$('range').oninput=e=>setHand(+e.target.value);
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowLeft')setHand(hand-1);if(e.key==='ArrowRight')setHand(hand+1)});
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>rows.length&&drawChart(),150)});
+load();setInterval(load,60000);setInterval(status,30000);
+})();
+</script>
+</body>
+</html>
